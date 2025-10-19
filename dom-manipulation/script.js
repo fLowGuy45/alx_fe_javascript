@@ -170,9 +170,66 @@ function importFromJsonFile(event) {
       alert('Failed to import JSON file: ' + err.message);
     }
   };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// --- Category Filtering ---
+let currentCategory = 'all';
+
+function populateCategories() {
+  const categorySelect = document.getElementById('categoryFilter');
+  const categories = new Set(['all']);
+  quotes.forEach(q => {
+    if (q.category) categories.add(q.category);
+  });
+  categorySelect.innerHTML = '';
+  categories.forEach(cat => {
+    const option = document.createElement('option');
+    option.value = cat;
+    option.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+    categorySelect.appendChild(option);
+  });
+  const savedFilter = localStorage.getItem('dq_last_category');
+  if (savedFilter && categories.has(savedFilter)) {
+    categorySelect.value = savedFilter;
+    currentCategory = savedFilter;
+  }
+  filterQuotes();
+}
+
+function filterQuotes() {
+  const categorySelect = document.getElementById('categoryFilter');
+  currentCategory = categorySelect.value;
+  localStorage.setItem('dq_last_category', currentCategory);
+  const container = document.getElementById('quotesContainer');
+  container.innerHTML = '';
+  quotes.forEach((q, i) => {
+    if (currentCategory === 'all' || q.category === currentCategory) {
+      const el = document.createElement('div');
+      el.className = 'quote';
+      el.innerHTML = `<strong>#${i + 1}</strong> <em>${q.author ? '— ' + escapeHtml(q.author) : ''}</em><p>${escapeHtml(q.text)}</p>`;
+      el.addEventListener('click', () => showQuote(i));
+      container.appendChild(el);
+    }
+  });
+}
+
+// --- Initialization & event wiring ---
+document.addEventListener('DOMContentLoaded', () => {
+  loadQuotes();
+
+  const last = sessionStorage.getItem(SESSION_KEY_LAST_INDEX);
+  if (last !== null && !isNaN(Number(last))) {
     currentIndex = Math.min(Math.max(Number(last), 0), Math.max(quotes.length - 1, 0));
   } else {
+    currentIndex = 0;
+  }
+
   renderQuotes();
+
+  document.getElementById('addBtn').addEventListener('click', () => {
+    const text = document.getElementById('quoteText').value;
     const author = document.getElementById('quoteAuthor').value;
     addQuote(text, author);
     document.getElementById('quoteText').value = '';
@@ -187,19 +244,3 @@ function importFromJsonFile(event) {
 
   console.log('Restored last viewed quote index:', currentIndex);
 });
-
-  document.getElementById('addBtn').addEventListener('click', () => {
-    const text = document.getElementById('quoteText').value;
-    currentIndex = 0;
-  }
-
-  reader.readAsText(file);
-  event.target.value = '';
-  if (last !== null && !isNaN(Number(last))) {
-}
-
-  const last = sessionStorage.getItem(SESSION_KEY_LAST_INDEX);
-// --- Initialization & event wiring ---
-document.addEventListener('DOMContentLoaded', () => {
-  loadQuotes();
-
