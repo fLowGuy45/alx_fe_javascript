@@ -239,11 +239,26 @@ function updateQuoteDisplay() {
 const SERVER_URL = 'https://jsonplaceholder.typicode.com/posts'; // mock API
 let lastSyncTime = null;
 
-async function fetchQuotesFromServerServer() {
+async function fetchQuotesFromServer() {
   try {
     const response = await fetch(SERVER_URL);
     const serverQuotes = await response.json();
-    resolveConflicts(serverQuotes);
+    // --- POST Sync to Server ---
+async function postQuoteToServer(quote) {
+  try {
+    await fetch(SERVER_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(quote)
+    });
+  } catch (err) {
+    console.error('POST failed:', err);
+  }
+}
+
+function resolveConflicts(serverQuotes);
   } catch (error) {
     console.error('Server fetch failed:', error);
   }
