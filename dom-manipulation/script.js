@@ -120,8 +120,12 @@ function clearLocalStorage() {
 }
 
 // --- Import / Export JSON ---
+function exportToJson() {
   const dataStr = JSON.stringify(quotes, null, 2);
   const blob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
   a.href = url;
   a.download = `quotes-${ts}.json`;
   document.body.appendChild(a);
@@ -129,10 +133,16 @@ function clearLocalStorage() {
   a.remove();
   URL.revokeObjectURL(url);
 }
+
+function importFromJsonFile(event) {
+  const file = event.target.files && event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = function (e) {
     try {
+      const imported = JSON.parse(e.target.result);
+      if (!Array.isArray(imported)) {
+        alert('Imported JSON must be an array of quote objects');
         return;
       }
       const sanitized = imported
@@ -160,46 +170,36 @@ function clearLocalStorage() {
       alert('Failed to import JSON file: ' + err.message);
     }
   };
-  reader.readAsText(file);
-  event.target.value = '';
-}
-
-// --- Initialization & event wiring ---
-document.addEventListener('DOMContentLoaded', () => {
-  loadQuotes();
-
-  const last = sessionStorage.getItem(SESSION_KEY_LAST_INDEX);
-  if (last !== null && !isNaN(Number(last))) {
     currentIndex = Math.min(Math.max(Number(last), 0), Math.max(quotes.length - 1, 0));
   } else {
-    currentIndex = 0;
-  }
-
+  renderQuotes();
+    const author = document.getElementById('quoteAuthor').value;
+    addQuote(text, author);
+    document.getElementById('quoteText').value = '';
+    document.getElementById('quoteAuthor').value = '';
+  });
 
   document.getElementById('showRandom').addEventListener('click', showRandomQuote);
+  document.getElementById('nextQuote').addEventListener('click', showNext);
+  document.getElementById('prevQuote').addEventListener('click', showPrev);
+  document.getElementById('clearStorage').addEventListener('click', clearLocalStorage);
   document.getElementById('exportJson').addEventListener('click', exportToJson);
 
   console.log('Restored last viewed quote index:', currentIndex);
 });
-  document.getElementById('nextQuote').addEventListener('click', showNext);
-  document.getElementById('prevQuote').addEventListener('click', showPrev);
-  document.getElementById('clearStorage').addEventListener('click', clearLocalStorage);
-  renderQuotes();
-    const author = document.getElementById('quoteAuthor').value;
-  });
-    addQuote(text, author);
-    document.getElementById('quoteText').value = '';
-    document.getElementById('quoteAuthor').value = '';
 
   document.getElementById('addBtn').addEventListener('click', () => {
     const text = document.getElementById('quoteText').value;
-      const imported = JSON.parse(e.target.result);
-      if (!Array.isArray(imported)) {
-        alert('Imported JSON must be an array of quote objects');
+    currentIndex = 0;
+  }
 
-function importFromJsonFile(event) {
-  const file = event.target.files && event.target.files[0];
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  reader.readAsText(file);
+  event.target.value = '';
+  if (last !== null && !isNaN(Number(last))) {
+}
+
+  const last = sessionStorage.getItem(SESSION_KEY_LAST_INDEX);
+// --- Initialization & event wiring ---
+document.addEventListener('DOMContentLoaded', () => {
+  loadQuotes();
 
