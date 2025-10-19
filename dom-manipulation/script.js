@@ -235,6 +235,38 @@ function updateQuoteDisplay() {
   });
 }
 
+// --- Server Sync Simulation ---
+const SERVER_URL = 'https://jsonplaceholder.typicode.com/posts'; // mock API
+let lastSyncTime = null;
+
+async function fetchQuotesFromServerServer() {
+  try {
+    const response = await fetch(SERVER_URL);
+    const serverQuotes = await response.json();
+    resolveConflicts(serverQuotes);
+  } catch (error) {
+    console.error('Server fetch failed:', error);
+  }
+}
+
+function resolveConflicts(serverQuotes) {
+  let updated = false;
+  serverQuotes.forEach(sq => {
+    const match = quotes.find(local => local.text === sq.title);
+    if (!match) {
+      quotes.push({ text: sq.title, author: sq.body });
+      updated = true;
+    }
+  });
+  if (updated) {
+    saveQuotes();
+    updateQuoteDisplay();
+    alert('Quotes updated from server. Conflicts resolved with server priority.');
+  }
+}
+
+setInterval(fetchQuotesFromServer, 30000); // periodic sync
+
 // --- Initialization & event wiring ---
 document.addEventListener('DOMContentLoaded', () => {
   loadQuotes();
