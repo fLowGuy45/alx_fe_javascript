@@ -202,6 +202,25 @@ function filterQuotes() {
   const categorySelect = document.getElementById('categoryFilter');
   currentCategory = categorySelect.value;
   localStorage.setItem('dq_last_category', currentCategory);
+  updateQuoteDisplay();
+}
+
+function updateQuoteDisplay() {
+  const container = document.getElementById('quotesContainer');
+  container.innerHTML = '';
+  quotes.forEach((q, i) => {
+    if (currentCategory === 'all' || q.category === currentCategory) {
+      const el = document.createElement('div');
+      el.className = 'quoteDisplay';
+      el.innerHTML = `<strong>#${i + 1}</strong> <em>${q.author ? '— ' + escapeHtml(q.author) : ''}</em><p>${escapeHtml(q.text)}</p>`;
+      el.addEventListener('click', () => showQuote(i));
+      container.appendChild(el);
+    }
+  });
+}() {
+  const categorySelect = document.getElementById('categoryFilter');
+  currentCategory = categorySelect.value;
+  localStorage.setItem('dq_last_category', currentCategory);
   const container = document.getElementById('quotesContainer');
   container.innerHTML = '';
   quotes.forEach((q, i) => {
