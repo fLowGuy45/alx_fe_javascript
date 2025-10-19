@@ -176,6 +176,7 @@ function importFromJsonFile(event) {
 
 // --- Category Filtering ---
 let currentCategory = 'all';
+let selectedCategory = 'all';
 
 function populateCategories() {
   const categorySelect = document.getElementById('categoryFilter');
