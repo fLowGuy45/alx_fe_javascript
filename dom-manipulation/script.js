@@ -1,72 +1,205 @@
-// Initial Quotes Array
-let quotes = [
-  { text: "The best way to predict the future is to create it.", category: "Motivation" },
-  { text: "Life is what happens when you're busy making other plans.", category: "Life" },
-  { text: "Simplicity is the soul of efficiency.", category: "Productivity" }
+// --- Data and storage keys ---
+const LOCAL_KEY = 'dq_quotes_v1';
+const SESSION_KEY_LAST_INDEX = 'dq_last_viewed_index';
+
+// default quotes (used if localStorage empty)
+const defaultQuotes = [
+  { text: "The only limit to our realization of tomorrow is our doubts of today.", author: "Franklin D. Roosevelt" },
+  { text: "Do or do not. There is no try.", author: "Yoda" },
+  { text: "In the middle of difficulty lies opportunity.", author: "Albert Einstein" }
 ];
 
-// DOM Elements
-const quoteDisplay = document.getElementById("quoteDisplay");
-const newQuoteBtn = document.getElementById("newQuote");
+let quotes = [];
+let currentIndex = 0; // index of currently viewed quote
 
-// ✅ Function to dynamically create the Add Quote Form (Required for checker)
-function createAddQuoteForm() {
-  const formWrapper = document.createElement("div");
-  formWrapper.classList.add("form-wrapper");
-
-  const title = document.createElement("h3");
-  title.textContent = "Add New Quote";
-  formWrapper.appendChild(title);
-
-  const inputText = document.createElement("input");
-  inputText.type = "text";
-  inputText.id = "newQuoteText";
-  inputText.placeholder = "Enter a new quote";
-  formWrapper.appendChild(inputText);
-
-  const inputCategory = document.createElement("input");
-  inputCategory.type = "text";
-  inputCategory.id = "newQuoteCategory";
-  inputCategory.placeholder = "Enter quote category";
-  formWrapper.appendChild(inputCategory);
-
-  const addBtn = document.createElement("button");
-  addBtn.textContent = "Add Quote";
-  addBtn.onclick = addQuote; // ✅ link to addQuote()
-  formWrapper.appendChild(addBtn);
-
-  document.body.appendChild(formWrapper); // Append to end of page dynamically
+// --- Storage helpers ---
+function saveQuotes() {
+  try {
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(quotes));
+  } catch (err) {
+    console.error('Failed to save quotes to localStorage:', err);
+  }
 }
 
-// Function to Show Random Quote
+function loadQuotes() {
+  const raw = localStorage.getItem(LOCAL_KEY);
+  if (!raw) {
+    quotes = [...defaultQuotes];
+    saveQuotes();
+    return;
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      quotes = parsed
+        .filter(q => q && typeof q.text === 'string')
+        .map(q => ({ text: q.text, author: q.author || '' }));
+    } else {
+      console.warn('Saved data not array; resetting to defaults');
+      quotes = [...defaultQuotes];
+      saveQuotes();
+    }
+  } catch (err) {
+    console.error('Error parsing saved quotes; resetting to defaults', err);
+    quotes = [...defaultQuotes];
+    saveQuotes();
+  }
+}
+
+// --- UI rendering ---
+function renderQuotes() {
+  const container = document.getElementById('quotesContainer');
+  container.innerHTML = '';
+  quotes.forEach((q, i) => {
+    const el = document.createElement('div');
+    el.className = 'quote';
+    el.innerHTML = `<strong>#${i + 1}</strong> <em>${q.author ? '— ' + escapeHtml(q.author) : ''}</em><p>${escapeHtml(q.text)}</p>`;
+    el.addEventListener('click', () => {
+      showQuote(i);
+    });
+    container.appendChild(el);
+  });
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// --- Quote actions ---
+function addQuote(text, author) {
+  if (!text || !text.trim()) {
+    alert('Quote text cannot be empty');
+    return;
+  }
+  quotes.push({ text: text.trim(), author: (author || '').trim() });
+  saveQuotes();
+  renderQuotes();
+  currentIndex = quotes.length - 1;
+  sessionStorage.setItem(SESSION_KEY_LAST_INDEX, String(currentIndex));
+  showQuote(currentIndex);
+}
+
+function showQuote(index) {
+  if (index < 0 || index >= quotes.length) return;
+  currentIndex = index;
+  sessionStorage.setItem(SESSION_KEY_LAST_INDEX, String(currentIndex));
+  const q = quotes[index];
+  alert(`Quote #${index + 1}\n${q.text}\n${q.author ? '— ' + q.author : ''}`);
+}
+
 function showRandomQuote() {
-  if (quotes.length === 0) {
-    quoteDisplay.innerHTML = "No quotes available.";
-    return;
-  }
-  const randomIndex = Math.floor(Math.random() * quotes.length);
-  const randomQuote = quotes[randomIndex];
-  quoteDisplay.innerHTML = `"${randomQuote.text}" <br><span class="category">— ${randomQuote.category}</span>`;
+  if (quotes.length === 0) return alert('No quotes available');
+  const i = Math.floor(Math.random() * quotes.length);
+  showQuote(i);
 }
 
-// Function to Add New Quote
-function addQuote() {
-  const quoteText = document.getElementById("newQuoteText").value.trim();
-  const quoteCategory = document.getElementById("newQuoteCategory").value.trim();
-
-  if (!quoteText || !quoteCategory) {
-    alert("Please enter both quote text and category.");
-    return;
-  }
-
-  quotes.push({ text: quoteText, category: quoteCategory });
-  document.getElementById("newQuoteText").value = "";
-  document.getElementById("newQuoteCategory").value = "";
-  alert("Quote added successfully!");
+function showNext() {
+  if (quotes.length === 0) return;
+  const next = (currentIndex + 1) % quotes.length;
+  showQuote(next);
 }
 
-// Event Listeners
-newQuoteBtn.addEventListener("click", showRandomQuote);
+function showPrev() {
+  if (quotes.length === 0) return;
+  const prev = (currentIndex - 1 + quotes.length) % quotes.length;
+  showQuote(prev);
+}
 
-// ✅ Automatically call the function so it actually renders (required for visual + checker)
-createAddQuoteForm();
+function clearLocalStorage() {
+  if (!confirm('Clear all saved quotes from local storage?')) return;
+  localStorage.removeItem(LOCAL_KEY);
+  quotes = [...defaultQuotes];
+  saveQuotes();
+  renderQuotes();
+  alert('Storage cleared and defaults restored.');
+}
+
+// --- Import / Export JSON ---
+  const dataStr = JSON.stringify(quotes, null, 2);
+  const blob = new Blob([dataStr], { type: 'application/json' });
+  a.href = url;
+  a.download = `quotes-${ts}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    try {
+        return;
+      }
+      const sanitized = imported
+        .filter(q => q && typeof q.text === 'string')
+        .map(q => ({ text: q.text.trim(), author: q.author ? String(q.author).trim() : '' }));
+      if (sanitized.length === 0) {
+        alert('No valid quotes found in import file');
+        return;
+      }
+      const existingSet = new Set(quotes.map(q => q.text + '||' + q.author));
+      let added = 0;
+      sanitized.forEach(sq => {
+        const key = sq.text + '||' + sq.author;
+        if (!existingSet.has(key)) {
+          quotes.push(sq);
+          existingSet.add(key);
+          added++;
+        }
+      });
+      saveQuotes();
+      renderQuotes();
+      alert(`Imported ${sanitized.length} quotes (${added} new).`);
+    } catch (err) {
+      console.error('Failed to import JSON', err);
+      alert('Failed to import JSON file: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// --- Initialization & event wiring ---
+document.addEventListener('DOMContentLoaded', () => {
+  loadQuotes();
+
+  const last = sessionStorage.getItem(SESSION_KEY_LAST_INDEX);
+  if (last !== null && !isNaN(Number(last))) {
+    currentIndex = Math.min(Math.max(Number(last), 0), Math.max(quotes.length - 1, 0));
+  } else {
+    currentIndex = 0;
+  }
+
+
+  document.getElementById('showRandom').addEventListener('click', showRandomQuote);
+  document.getElementById('exportJson').addEventListener('click', exportToJson);
+
+  console.log('Restored last viewed quote index:', currentIndex);
+});
+  document.getElementById('nextQuote').addEventListener('click', showNext);
+  document.getElementById('prevQuote').addEventListener('click', showPrev);
+  document.getElementById('clearStorage').addEventListener('click', clearLocalStorage);
+  renderQuotes();
+    const author = document.getElementById('quoteAuthor').value;
+  });
+    addQuote(text, author);
+    document.getElementById('quoteText').value = '';
+    document.getElementById('quoteAuthor').value = '';
+
+  document.getElementById('addBtn').addEventListener('click', () => {
+    const text = document.getElementById('quoteText').value;
+      const imported = JSON.parse(e.target.result);
+      if (!Array.isArray(imported)) {
+        alert('Imported JSON must be an array of quote objects');
+
+function importFromJsonFile(event) {
+  const file = event.target.files && event.target.files[0];
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+
